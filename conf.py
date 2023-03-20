@@ -45,16 +45,29 @@ for k in range(0,nbAs):
     for j in range(nbAs):
         matAdjAs[k].append("")
 
+def getASBRlist(asId):
+    res = []
+    for router in routers:
+        if router["as"] == asId:
+            for adj in router["adj"]:
+                for link in adj["links"]:
+                    if str(link["protocol-type"]) == "egp" and router["id"] not in res:
+                        res.append(router["id"])
+                        
+    return res
+
 for router in routers:
     name = router["name"]
     id = router["id"]
     As = router["as"]
     igp = [a["igp"] for a in autoSys if a["id"]==As][0]
     egp = [a["egp"] for a in autoSys if a["id"]==As][0]
+    asType = [a["type"] for a in autoSys if a["id"]==As][0]
     adj = router["adj"]
-    isASBR = name.startswith("PE")
     egpNeigbors = []
-    ASBRlist = [AsInfo["edgeRouters"] for AsInfo in autoSys if AsInfo["id"]==As][0]
+    ASBRlist = getASBRlist(As)
+    isASBR = id in ASBRlist
+    customers = {}
 
     if not os.path.exists(outputPath):
         os.makedirs(outputPath)
@@ -71,7 +84,7 @@ for router in routers:
     res.write("!\n")
     
     ## PHYSICAL INTERFACES
-    for adj in router["adj"]:
+    for adj in router["adj"]: # this loops fills egpNeigbors (if the router is an ASBR ofc)
         neighbID = adj["neighbor"]
         neighbAs = [router["as"] for router in routers if router["id"]==neighbID][0]
         preferedAs = As # used for choosing the ip prefixes (either As or neighbAs)
@@ -108,10 +121,17 @@ for router in routers:
                 res.write(" duplex full\n")
             if str(link["interface"]).startswith("GigabitEthernet") :
                 res.write(" negotiation auto\n")
+
+            if asType == "provider" and str(link["protocol-type"]) == "egp":
+                neighborAs = egpNeigbors[-1].split()[1]
+                neighbAsName = [a["name"] for a in autoSys if a["id"]==int(neighborAs)][0]
+                res.write(f" vrf forwarding {neighbAsName}\n")
+
             res.write(f" ip address {ip} 255.255.255.0\n")
 
-            if str(link["protocol-type"]) == "igp" :
-                res.write(f" mpls ip\n")
+            if str(link["protocol-type"]) == "igp":
+                if asType=="provider":
+                    res.write(f" mpls ip\n")
                 if igp == "ospf":
                     res.write(f" ip ospf {ospfProcess} area 0\n")
                     if "ospf-metric" in link.keys(): # OSPF metric is optional
@@ -120,8 +140,49 @@ for router in routers:
             
             res.write("!\n")
     
+    # VRF definitions
+    if asType == "provider" and isASBR:
+        for ebgpNeighb in egpNeigbors: # fill customers dict
+            ipNeighb = ebgpNeighb.split()[0]
+            asNeighb = int(ebgpNeighb.split()[1])
+            asNeighbName = [a["name"] for a in autoSys if a["id"]==asNeighb][0]
+            if asNeighbName not in customers.keys():
+                customers[asNeighbName] = [ebgpNeighb]
+            else :
+                customers[asNeighbName].append(ebgpNeighb)
+        
+        for customer in customers.keys():
+            firstDetectedAs = customers[customer][0].split()[1]
+            res.write(f"vrf definition {customer}\n")
+            res.write(f" rd {firstDetectedAs}:{firstDetectedAs}\n")
+            res.write(f" route-target export {firstDetectedAs}:{firstDetectedAs}\n")
+            res.write(f" route-target import {firstDetectedAs}:{firstDetectedAs}\n")
+            res.write(" address-family ipv4\n")
+            res.write(" exit-address-family\n!\n")
+
     ## EGP
-    if egp == "bgp" and isASBR:
+    if egp == "bgp" and isASBR and asType == "provider":
+        res.write(f"router bgp {As}\n")
+        res.write(f" bgp router-id {id}.{id}.{id}.{id}\n")
+        res.write(" bgp log-neighbor-changes\n")
+        res.write(" redistribute bgp\n")
+
+        # iBGP with PE
+        for routerID in ASBRlist:
+            if routerID != id:
+                res.write(f" neighbor {lpPrefix}{routerID} remote-as {As}\n")
+                res.write(f" neighbor {lpPrefix}{routerID} update-source Loopback0\n")
+
+        res.write(" address-family vpnv4\n")
+
+        for routerID in ASBRlist:
+            if routerID != id:
+                res.write(f"  neighbor {lpPrefix}{routerID} activate\n")
+                res.write(f"  neighbor {lpPrefix}{routerID} send-community both\n")
+        
+        res.write(" exit-address-family\n!\n")
+
+    if egp == "bgp" and asType == "customer":
         res.write(f"router bgp {As}\n")
         res.write(f" bgp router-id {id}.{id}.{id}.{id}\n")
         res.write(" bgp log-neighbor-changes\n")
@@ -131,22 +192,24 @@ for router in routers:
                 ipNeighb = ebgpNeighb.split()[0]
                 asNeighb = ebgpNeighb.split()[1]
                 res.write(f" neighbor {ipNeighb} remote-as {asNeighb}\n")
-        
-        for routerID in ASBRlist: #iBGP full mesh between edge routers
+
+        for routerID in [router["id"] for router in routers if router["as"]==As]:
             if routerID != id:
                 res.write(f" neighbor {lpPrefix}{routerID} remote-as {As}\n")
                 res.write(f" neighbor {lpPrefix}{routerID} update-source Loopback0\n")
 
-        res.write(" address-family vpnv4\n")
-'''
+        res.write(" !\n address-family ipv4\n")
+
         if isASBR :
             res.write("  redistribute connected\n")
+            if(igp == "rip"):
+                res.write(f"  redistribute rip {ripName}\n")
             if(igp == "ospf"):
                 res.write(f"  redistribute ospf {ospfProcess}\n")
-            res.write("  network " + asInf[As]["prefix"] + ":/48\n")
+            res.write("  network " + asInf[As]["prefix"] + "0.0\n")
             for ebgpNeighb in egpNeigbors:
                 res.write(f"  neighbor {ebgpNeighb.split()[0]} activate\n")
-                myCustoms = [a["customers"] for a in autoSys if a["id"]==As][0]
+                '''myCustoms = [a["customers"] for a in autoSys if a["id"]==As][0]
                 myPeers = [a["peers"] for a in autoSys if a["id"]==As][0]
                 myProviders = [a["providers"] for a in autoSys if a["id"]==As][0]
 
@@ -155,17 +218,12 @@ for router in routers:
                 elif int(ebgpNeighb.split()[1]) in myPeers:
                     res.write(f"  neighbor {ebgpNeighb.split()[0]} route-map PEERS in\n")
                 elif int(ebgpNeighb.split()[1]) in myProviders:
-                    res.write(f"  neighbor {ebgpNeighb.split()[0]} route-map PROVIDERS in\n")
-                
-'''
-        for routerID in ASBRlist:
+                    res.write(f"  neighbor {ebgpNeighb.split()[0]} route-map PROVIDERS in\n")'''
+        for routerID in [router["id"] for router in routers if router["as"]==As]:
             if routerID != id:
                 res.write(f"  neighbor {lpPrefix}{routerID} activate\n")
-                res.write(f"  neighbor {lpPrefix}{routerID} send-community both\n")
         
         res.write(" exit-address-family\n!\n")
-
-    res.write("ip forward-protocol nd\nno ip http server\nno ip http secure-server\n!\n")
 
     ## IGP
     if(igp == "ospf"):
@@ -173,13 +231,24 @@ for router in routers:
         #if isASBR: # ??
             #res.write(" redistribute connected\n")
     res.write("!\n")
-'''
-    if isASBR :
+
+    # eBGP with CE
+    if asType == "provider" and isASBR:
+        for asNeighbName in customers.keys():
+            res.write(f"address-family ipv4 vrf {asNeighbName}\n")
+            for ebgpNeighb in customers[asNeighbName]:
+                ipNeighb = ebgpNeighb.split()[0]
+                asNeighb = ebgpNeighb.split()[1]
+                res.write(f" neighbor {ipNeighb} remote-as {asNeighb}\n")
+                res.write(f" neighbor {ipNeighb} activate\n")
+            res.write("exit address-family\n!\n")
+
+    '''if isASBR :
         ## ROUTE-MAPS
         res.write(f"route-map CUSTOMERS permit 10\n set local-preference {customPref}\n!\n")
         res.write(f"route-map PEERS permit 10\n set local-preference {peerPref}\n!\n")
-        res.write(f"route-map PROVIDERS permit 10\n set local-preference {providerPref}\n!\n")
-'''
+        res.write(f"route-map PROVIDERS permit 10\n set local-preference {providerPref}\n!\n")'''
+
 
     res.write("control-plane\nline con 0\n exec-timeout 0 0\n privilege level 15\n logging synchronous\n stopbits 1\nline aux 0\n exec-timeout 0 0\n privilege level 15\n logging synchronous\n stopbits 1\nline vty 0 4\n login\n!\nend")
     

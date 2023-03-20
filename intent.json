@@ -13,35 +13,39 @@
             "igp": "ospf",
             "egp": "bgp",
             "ip-prefix": "200.1.",
-            "edgeRouters": [1,4]
+            "type": "provider"
         },
         {
             "id":3,
             "igp": "ospf",
             "egp": "bgp",
             "ip-prefix": "200.3.",
-            "edgeRouters": [5]
+            "type": "customer",
+            "name": "Client_A"
         },
         {
             "id":2,
             "igp": "ospf",
             "egp": "bgp",
             "ip-prefix": "200.2.",
-            "edgeRouters": [6]
+            "type" : "customer",
+            "name": "Client_B"
         },
         {
             "id":5,
             "igp": "ospf",
             "egp": "bgp",
             "ip-prefix": "200.5.",
-            "edgeRouters": [7]
+            "type": "customer",
+            "name": "Client_A"
         },
         {
             "id":4,
             "igp": "ospf",
             "egp": "bgp",
             "ip-prefix": "200.4.",
-            "edgeRouters": [8]
+            "type": "customer",
+            "name": "Client_B"
         }
     ],
     "routers": [
@@ -165,6 +169,14 @@
                     "protocol-type": "egp"
                 }
                 ]
+            },
+            {
+                "neighbor":9,
+                "links":[{
+                    "interface":"GigabitEthernet2/0",
+                    "protocol-type": "igp"
+                }
+                ]
             }
         ]
     },
@@ -208,6 +220,21 @@
                 "links":[{
                     "interface":"GigabitEthernet1/0",
                     "protocol-type": "egp"
+                }
+                ]
+            }
+        ]
+    },
+    {   
+        "name":"C1",
+        "id":9,
+        "as":3,
+        "adj":[
+            {
+                "neighbor":5,
+                "links":[{
+                    "interface":"GigabitEthernet2/0",
+                    "protocol-type": "igp"
                 }
                 ]
             }
