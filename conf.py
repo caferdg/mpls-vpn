@@ -182,6 +182,16 @@ for router in routers:
         
         res.write(" exit-address-family\n!\n")
 
+        # eBGP with CE
+        for asNeighbName in customers.keys():
+            res.write(f" address-family ipv4 vrf {asNeighbName}\n")
+            for ebgpNeighb in customers[asNeighbName]:
+                ipNeighb = ebgpNeighb.split()[0]
+                asNeighb = ebgpNeighb.split()[1]
+                res.write(f"  neighbor {ipNeighb} remote-as {asNeighb}\n")
+                res.write(f"  neighbor {ipNeighb} activate\n")
+            res.write(" exit-address-family\n!\n")
+
     if egp == "bgp" and asType == "customer":
         res.write(f"router bgp {As}\n")
         res.write(f" bgp router-id {id}.{id}.{id}.{id}\n")
@@ -232,16 +242,6 @@ for router in routers:
             #res.write(" redistribute connected\n")
     res.write("!\n")
 
-    # eBGP with CE
-    if asType == "provider" and isASBR:
-        for asNeighbName in customers.keys():
-            res.write(f"address-family ipv4 vrf {asNeighbName}\n")
-            for ebgpNeighb in customers[asNeighbName]:
-                ipNeighb = ebgpNeighb.split()[0]
-                asNeighb = ebgpNeighb.split()[1]
-                res.write(f" neighbor {ipNeighb} remote-as {asNeighb}\n")
-                res.write(f" neighbor {ipNeighb} activate\n")
-            res.write("exit address-family\n!\n")
 
     '''if isASBR :
         ## ROUTE-MAPS
