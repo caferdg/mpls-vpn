@@ -14,15 +14,17 @@ routers = jsonFile["routers"]
 autoSys = jsonFile["as"]
 nbRouter = len(routers)
 nbAs = len(autoSys)
-customPref = jsonFile["preferences"]["custom-pref"]
-peerPref = jsonFile["preferences"]["peer-pref"]
-providerPref = jsonFile["preferences"]["provider-pref"]
-vrf = jsonFile["preferences"]["vrf"]
+
 
 # PREFERENCES
 lpPrefix = jsonFile["preferences"]["lp-prefix"] # must be a /112 !!
 ripName = jsonFile["preferences"]["ripName"]
 ospfProcess = str(jsonFile["preferences"]["ospfPid"])
+customPref = jsonFile["preferences"]["custom-pref"]
+peerPref = jsonFile["preferences"]["peer-pref"]
+providerPref = jsonFile["preferences"]["provider-pref"]
+vrf = jsonFile["preferences"]["vrf"]
+
 asInf = dict() # dictionnary containing the ip prefix and the index of each AS
 for i in range(nbAs):
     as_ = autoSys[i]
@@ -50,7 +52,7 @@ def getASBRlist(asId):
         if router["as"] == asId:
             for adj in router["adj"]:
                 for link in adj["links"]:
-                    if str(link["protocol-type"]) == "egp" and router["id"] not in res:
+                    if link["protocol-type"] == "egp" and router["id"] not in res:
                         res.append(router["id"])
     return res
 
@@ -79,16 +81,17 @@ for router in routers:
     if asType == "provider" and isASBR:
         for customer in vrf:
             name=customer["name"]
-            firstDetectedAs = customer["as"][0]
+            rd = customer["rd"]
+            rt = customer["rt"]
             res.write(f"vrf definition {name}\n")
-            res.write(f" rd {firstDetectedAs}:{firstDetectedAs}\n")
-            res.write(f" route-target export {firstDetectedAs}:{firstDetectedAs}\n")
-            res.write(f" route-target import {firstDetectedAs}:{firstDetectedAs}\n")
+            res.write(f" rd {rd}\n")
+            res.write(f" route-target export {rt}\n")
+            res.write(f" route-target import {rt}\n")
             res.write(" address-family ipv4\n")
             res.write(" exit-address-family\n!\n")
-        res.write("!\n!\n!\n!\n!\n")
+        res.write("!\n!\n!\n")
 
-    ## LOOPBACK
+    ## LOOPBACK INTERFACE
     res.write(f"interface Loopback0\n ip address {lpPrefix}{id} 255.255.255.255\n")
     if(igp == "ospf"):
         res.write(f" ip ospf {ospfProcess} area 0\n")
@@ -105,9 +108,9 @@ for router in routers:
         for link in adj["links"]:
 
             ## IP GENERATION
-            if str(link["protocol-type"]) == "igp": # routeur a l'interieur de l'AS (pas ASBR)
+            if link["protocol-type"] == "igp": # routeur a l'interieur de l'AS (pas ASBR)
                 ip = asInf[As]["prefix"]
-            if str(link["protocol-type"]) == "egp": # routeur en bordure d'AS
+            if link["protocol-type"] == "egp": # routeur en bordure d'AS
                 isASBR = True
                 if matAdjAs[asInd][neighbAsInd] == "" and matAdjAs[neighbAsInd][asInd]=="": # adjacence inter AS pas encore initialise
                     ip = asInf[preferedAs]["prefix"]
@@ -119,28 +122,28 @@ for router in routers:
                 listeSousRes[asInf[preferedAs]["index"]] += 1
                 matAdj[id-1][neighbID-1], matAdj[neighbID-1][id-1] = listeSousRes[asInf[preferedAs]["index"]], listeSousRes[asInf[preferedAs]["index"]]
                 ip += str(matAdj[id-1][neighbID-1]) + ".1"
-                if isASBR and str(link["protocol-type"]) == "egp":
+                if isASBR and link["protocol-type"] == "egp":
                     egpNeigbors.append(ip[:-1] + "2" + " " + str(neighbAs))
             else: # sous reseau deja cree
                 ip += str(matAdj[id-1][neighbID-1]) + ".2"
-                if isASBR and str(link["protocol-type"]) == "egp":
+                if isASBR and link["protocol-type"] == "egp":
                     egpNeigbors.append(ip[:-1] + "1" + " "+ str(neighbAs))
 
             # INTERFACE
-            res.write("interface " + str(link["interface"]) + "\n")
-            if str(link["interface"]).startswith("FastEthernet") :
+            res.write("interface " + link["interface"] + "\n")
+            if link["interface"].startswith("FastEthernet") :
                 res.write(" duplex full\n")
-            if str(link["interface"]).startswith("GigabitEthernet") :
+            if link["interface"].startswith("GigabitEthernet") :
                 res.write(" negotiation auto\n")
 
-            if asType == "provider" and str(link["protocol-type"]) == "egp":
+            if asType == "provider" and link["protocol-type"] == "egp":
                 neighborAs = int(egpNeigbors[-1].split()[1])
                 neighbAsName = [client["name"] for client in vrf if neighborAs in client["as"]][0]
                 res.write(f" vrf forwarding {neighbAsName}\n")
 
             res.write(f" ip address {ip} 255.255.255.0\n")
 
-            if str(link["protocol-type"]) == "igp":
+            if link["protocol-type"] == "igp":
                 if asType=="provider":
                     res.write(f" mpls ip\n")
                 if igp == "ospf":
@@ -150,7 +153,7 @@ for router in routers:
                         res.write(f" ip ospf cost {cost}\n")
             
             res.write("!\n")
-    
+    res.write("!\n!\n!\n!\n!\n")
 
     ## EGP
     if egp == "bgp" and isASBR and asType == "provider":
@@ -175,8 +178,8 @@ for router in routers:
 
         # eBGP with CE
         for customer in vrf:
-            name = customer["name"]
-            res.write(f" address-family ipv4 vrf {name}\n")
+            custName = customer["name"]
+            res.write(f" address-family ipv4 vrf {custName}\n")
             for extNeighb in egpNeigbors:
                 ipNeighb = extNeighb.split()[0]
                 asNeighb = int(extNeighb.split()[1])
@@ -218,11 +221,12 @@ for router in routers:
                 res.write(f"  neighbor {lpPrefix}{routerID} activate\n")
         
         res.write(" exit-address-family\n!\n")
+    res.write("!\n!\n!\n")
 
     ## IGP
     if(igp == "ospf"):
         res.write(f"router ospf {ospfProcess}\n router-id {id}.{id}.{id}.{id}\n")
-    res.write("!\n")
+    res.write("!\n!\n!\n")
 
 
     '''if isASBR :
