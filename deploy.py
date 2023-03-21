@@ -1,7 +1,7 @@
 import os, sys, re, shutil
 
 if len(sys.argv) != 3:
-    print("Usage: python3 conf.py <confFilePath> <projectName>")
+    print("Usage: python3 deploy.py <confFilePath> <projectName>")
     exit(1)
 
 confDir = sys.argv[1]
