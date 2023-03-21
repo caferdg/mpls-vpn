@@ -5,7 +5,17 @@
         "ospfPid": 1,
         "custom-pref": 150,
         "peer-pref": 100,
-        "provider-pref": 50
+        "provider-pref": 50,
+        "vrf": [
+            {
+                "name":"Client_A",
+                "as": [3,5]
+            },
+            {
+                "name":"Client_B",
+                "as": [2,4]
+            }
+        ]
     },
     "as":[
         {
@@ -20,32 +30,28 @@
             "igp": "ospf",
             "egp": "bgp",
             "ip-prefix": "200.3.",
-            "type": "customer",
-            "name": "Client_A"
+            "type": "customer"
         },
         {
             "id":2,
             "igp": "ospf",
             "egp": "bgp",
             "ip-prefix": "200.2.",
-            "type" : "customer",
-            "name": "Client_B"
+            "type" : "customer"
         },
         {
             "id":5,
             "igp": "ospf",
             "egp": "bgp",
             "ip-prefix": "200.5.",
-            "type": "customer",
-            "name": "Client_A"
+            "type": "customer"
         },
         {
             "id":4,
             "igp": "ospf",
             "egp": "bgp",
             "ip-prefix": "200.4.",
-            "type": "customer",
-            "name": "Client_B"
+            "type": "customer"
         }
     ],
     "routers": [
