@@ -5,7 +5,7 @@ Authors : Cafer DINGIL, Arthur-Mustapha FARWATI, Thomas FEUTREN, Baptiste GOUYEN
 ...
 
 ## Features
-...
+![Alt text](https://github.com/caferdg/mpls-vpn/blob/main/MPLS.png)
 
 ## Execution
 `python3 conf.py <intentFile> <outputDir>`
