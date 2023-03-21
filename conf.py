@@ -56,6 +56,7 @@ def getASBRlist(asId):
                         
     return res
 
+customers = {}
 for router in routers:
     name = router["name"]
     id = router["id"]
@@ -67,7 +68,6 @@ for router in routers:
     egpNeigbors = []
     ASBRlist = getASBRlist(As)
     isASBR = id in ASBRlist
-    customers = {}
 
     if not os.path.exists(outputPath):
         os.makedirs(outputPath)
@@ -115,6 +115,26 @@ for router in routers:
                 if isASBR and str(link["protocol-type"]) == "egp":
                     egpNeigbors.append(ip[:-1] + "1" + " "+ str(neighbAs))
             
+            # VRF definitions
+            if asType == "provider" and isASBR:
+                for ebgpNeighb in egpNeigbors: # fill customers dict
+                    ipNeighb = ebgpNeighb.split()[0]
+                    asNeighb = int(ebgpNeighb.split()[1])
+                    asNeighbName = [a["name"] for a in autoSys if a["id"]==asNeighb][0]
+                    if asNeighbName not in customers.keys():
+                        customers[asNeighbName] = [ebgpNeighb]
+                    else :
+                        customers[asNeighbName].append(ebgpNeighb)
+                
+                for customer in customers.keys():
+                    firstDetectedAs = customers[customer][0].split()[1]
+                    res.write(f"vrf definition {customer}\n")
+                    res.write(f" rd {firstDetectedAs}:{firstDetectedAs}\n")
+                    res.write(f" route-target export {firstDetectedAs}:{firstDetectedAs}\n")
+                    res.write(f" route-target import {firstDetectedAs}:{firstDetectedAs}\n")
+                    res.write(" address-family ipv4\n")
+                    res.write(" exit-address-family\n!\n")
+
             # INTERFACE
             res.write("interface " + str(link["interface"]) + "\n")
             if str(link["interface"]).startswith("FastEthernet") :
@@ -140,32 +160,12 @@ for router in routers:
             
             res.write("!\n")
     
-    # VRF definitions
-    if asType == "provider" and isASBR:
-        for ebgpNeighb in egpNeigbors: # fill customers dict
-            ipNeighb = ebgpNeighb.split()[0]
-            asNeighb = int(ebgpNeighb.split()[1])
-            asNeighbName = [a["name"] for a in autoSys if a["id"]==asNeighb][0]
-            if asNeighbName not in customers.keys():
-                customers[asNeighbName] = [ebgpNeighb]
-            else :
-                customers[asNeighbName].append(ebgpNeighb)
-        
-        for customer in customers.keys():
-            firstDetectedAs = customers[customer][0].split()[1]
-            res.write(f"vrf definition {customer}\n")
-            res.write(f" rd {firstDetectedAs}:{firstDetectedAs}\n")
-            res.write(f" route-target export {firstDetectedAs}:{firstDetectedAs}\n")
-            res.write(f" route-target import {firstDetectedAs}:{firstDetectedAs}\n")
-            res.write(" address-family ipv4\n")
-            res.write(" exit-address-family\n!\n")
 
     ## EGP
     if egp == "bgp" and isASBR and asType == "provider":
         res.write(f"router bgp {As}\n")
         res.write(f" bgp router-id {id}.{id}.{id}.{id}\n")
         res.write(" bgp log-neighbor-changes\n")
-        res.write(" redistribute bgp\n")
 
         # iBGP with PE
         for routerID in ASBRlist:
