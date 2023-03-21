@@ -3,9 +3,7 @@ import json, os, sys
 if len(sys.argv) != 3:
     print("Usage: python3 conf.py <intentFile> <outputDir>")
     exit(1)
-
-enableBgp = False
-
+    
 # IMPORT NETWORK INTENT
 intent = sys.argv[1]
 outputPath = sys.argv[2]
