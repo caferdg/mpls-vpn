@@ -3,9 +3,6 @@
         "lp-prefix": "120.0.0.",
         "ripName": "ripp",
         "ospfPid": 1,
-        "custom-pref": 150,
-        "peer-pref": 100,
-        "provider-pref": 50,
         "vrf": [
             {
                 "name":"Client_A",

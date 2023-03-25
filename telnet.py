@@ -1,7 +1,7 @@
 import json, os, sys, telnetlib, time
 
 if len(sys.argv) != 3:
-    print("Usage: python3 conf.py <intentFile> <outputDir>")
+    print("Usage: python3 telnet.py <intentFile> <outputDir>")
     exit(1)
     
 # IMPORT NETWORK INTENT
@@ -70,34 +70,34 @@ for router in routers:
     ASBRlist = getASBRlist(As)
     isASBR = id in ASBRlist
 
-    def ecrire(b):
-        tn.write(b)
+    def telWrite(strin):
+        tn.write(str.encode(strin))
         time.sleep(0.01)
 
-    ## CONSTANTS
-    ecrire(b"enable\r")
-    ecrire(b"conf t\r")
-    ecrire(str.encode(f"version 15.2\rservice timestamps debug datetime msec\rservice timestamps log datetime msec\r!\rhostname {name}\r!\rboot-start-marker\rboot-end-marker\rno aaa new-model\rno ip icmp rate-limit unreachable\rip cef\rno ip domain lookup\rno ipv6 cef\rmultilink bundle-name authenticated\rip tcp synwait-time 5\r!\r"))
+    # CONSTANTS
+    telWrite("enable\r")
+    telWrite("conf t\r")
+    telWrite(f"version 15.2\rservice timestamps debug datetime msec\rservice timestamps log datetime msec\r!\rhostname {name}\r!\rboot-start-marker\rboot-end-marker\rno aaa new-model\rno ip icmp rate-limit unreachable\rip cef\rno ip domain lookup\rno ipv6 cef\rmultilink bundle-name authenticated\rip tcp synwait-time 5\r!\r")
 
     # VRF definitions
-    if asType == "provider" and isASBR: # == PE
+    if asType == "provider" and isASBR:
         for customer in vrf:
             name=customer["name"]
             rd = customer["rd"]
             rt = customer["rt"]
-            ecrire(str.encode(f"vrf definition {name}\r"))
-            ecrire(str.encode(f" rd {rd}\r"))
-            ecrire(str.encode(f" route-target export {rt}\r"))
-            ecrire(str.encode(f" route-target import {rt}\r"))
-            ecrire(b" address-family ipv4\r")
-            ecrire(b" exit-address-family\r!\r")
-            ecrire(b"exit\r")
+            telWrite(f"vrf definition {name}\r")
+            telWrite(f"rd {rd}\r")
+            telWrite("route-target export {rt}\r")
+            telWrite("route-target import {rt}\r")
+            telWrite("address-family ipv4\r")
+            telWrite("exit-address-family\r!\r")
+            telWrite("exit\r")
 
     ## LOOPBACK INTERFACE
-    ecrire(str.encode(f"interface Loopback0\r ip address {lpPrefix}{id} 255.255.255.255\r"))
+    telWrite(f"interface Loopback0\r ip address {lpPrefix}{id} 255.255.255.255\r")
     if(igp == "ospf"):
-        ecrire(str.encode(f" ip ospf {ospfProcess} area 0\r"))
-    ecrire(b"exit\r")
+        telWrite(f"ip ospf {ospfProcess} area 0\r")
+    telWrite("exit\r")
     
     
     ## PHYSICAL INTERFACES
@@ -111,7 +111,7 @@ for router in routers:
         for link in adj["links"]:
 
             ## IP GENERATION
-            if link["protocol-type"] == "igp": # routeur a l'interieur de l'AS (pas ASBR)ecrire(
+            if link["protocol-type"] == "igp": # routeur a l'interieur de l'AS (pas ASBR)telWrite(
                 ip = asInf[As]["prefix"]
             if link["protocol-type"] == "egp": # routeur en bordure d'AS
                 isASBR = True
@@ -133,102 +133,102 @@ for router in routers:
                     egpNeigbors.append(ip[:-1] + "1" + " "+ str(neighbAs))
 
             # INTERFACE
-            ecrire(str.encode("interface " + link["interface"] + "\r"))
+            telWrite("interface " + link["interface"] + "\r")
             if link["interface"].startswith("FastEthernet") :
-                ecrire(str.encode(" duplex full\r"))
+                telWrite("duplex full\r")
             if link["interface"].startswith("GigabitEthernet") :
-                ecrire(str.encode(" negotiation auto\r"))
+                telWrite("negotiation auto\r")
 
             if asType == "provider" and link["protocol-type"] == "egp":
                 neighborAs = int(egpNeigbors[-1].split()[1])
                 neighbAsName = [client["name"] for client in vrf if neighborAs in client["as"]][0]
-                ecrire(str.encode(f" vrf forwarding {neighbAsName}\r"))
+                telWrite(f"vrf forwarding {neighbAsName}\r")
 
-            ecrire(str.encode(f" ip address {ip} 255.255.255.0\r"))
+            telWrite(f"ip address {ip} 255.255.255.0\r")
 
             if link["protocol-type"] == "igp":
                 if asType=="provider":
-                    ecrire(str.encode(f" mpls ip\r"))
+                    telWrite(f"mpls ip\r")
                 if igp == "ospf":
-                    ecrire(str.encode(f" ip ospf {ospfProcess} area 0\r"))
+                    telWrite(f"ip ospf {ospfProcess} area 0\r")
                     if "ospf-metric" in link.keys(): # OSPF metric is optional
                         cost = link["ospf-metric"]
-                        ecrire(str.encode(f" ip ospf cost {cost}\r"))
+                        telWrite(f"ip ospf cost {cost}\r")
             
-            ecrire(b"exit\r")
+            telWrite(b"exit\r")
 
     ## EGP
     if egp == "bgp" and isASBR and asType == "provider":
-        ecrire(str.encode(f"router bgp {As}\r"))
-        ecrire(str.encode(f" bgp router-id {id}.{id}.{id}.{id}\r"))
-        ecrire(str.encode(" bgp log-neighbor-changes\r"))
+        telWrite(f"router bgp {As}\r")
+        telWrite(f"bgp router-id {id}.{id}.{id}.{id}\r")
+        telWrite("bgp log-neighbor-changes\r")
 
         # iBGP with PE
         for routerID in ASBRlist:
             if routerID != id:
-                ecrire(str.encode(f" neighbor {lpPrefix}{routerID} remote-as {As}\r"))
-                ecrire(str.encode(f" neighbor {lpPrefix}{routerID} update-source Loopback0\r"))
+                telWrite(f"neighbor {lpPrefix}{routerID} remote-as {As}\r")
+                telWrite(f"neighbor {lpPrefix}{routerID} update-source Loopback0\r")
 
-        ecrire(str.encode(" address-family vpnv4\r"))
+        telWrite("address-family vpnv4\r")
 
         for routerID in ASBRlist:
             if routerID != id:
-                ecrire(str.encode(f"  neighbor {lpPrefix}{routerID} activate\r"))
-                ecrire(str.encode(f"  neighbor {lpPrefix}{routerID} send-community both\r"))
-        ecrire(str.encode(" exit-address-family\r"))
+                telWrite(f"neighbor {lpPrefix}{routerID} activate\r")
+                telWrite(f"neighbor {lpPrefix}{routerID} send-community both\r")
+        telWrite("exit-address-family\r")
 
         # eBGP with CE
         for customer in vrf:
             custName = customer["name"]
-            ecrire(str.encode(f" address-family ipv4 vrf {custName}\r"))
+            telWrite(f"address-family ipv4 vrf {custName}\r")
             for extNeighb in egpNeigbors:
                 ipNeighb = extNeighb.split()[0]
                 asNeighb = int(extNeighb.split()[1])
                 if asNeighb in customer["as"]:
-                    ecrire(str.encode(f"  neighbor {ipNeighb} remote-as {asNeighb}\r"))
-                    ecrire(str.encode(f"  neighbor {ipNeighb} activate\r"))
-            ecrire(str.encode(" exit-address-family\r"))
-        ecrire(b"exit\r")
+                    telWrite(f"neighbor {ipNeighb} remote-as {asNeighb}\r")
+                    telWrite(f"neighbor {ipNeighb} activate\r")
+            telWrite("exit-address-family\r")
+        telWrite("exit\r")
             
 
     if egp == "bgp" and asType == "customer":
-        ecrire(str.encode(f"router bgp {As}\r"))
-        ecrire(str.encode(f" bgp router-id {id}.{id}.{id}.{id}\r"))
-        ecrire(str.encode(" bgp log-neighbor-changes\r"))
+        telWrite(f"router bgp {As}\r")
+        telWrite(f"bgp router-id {id}.{id}.{id}.{id}\r")
+        telWrite("bgp log-neighbor-changes\r")
 
         if isASBR :
             for ebgpNeighb in egpNeigbors:
                 ipNeighb = ebgpNeighb.split()[0]
                 asNeighb = ebgpNeighb.split()[1]
-                ecrire(str.encode(f" neighbor {ipNeighb} remote-as {asNeighb}\r"))
+                telWrite(f"neighbor {ipNeighb} remote-as {asNeighb}\r")
 
         for routerID in [router["id"] for router in routers if router["as"]==As]:
             if routerID != id:
-                ecrire(str.encode(f" neighbor {lpPrefix}{routerID} remote-as {As}\r"))
-                ecrire(str.encode(f" neighbor {lpPrefix}{routerID} update-source Loopback0\r"))
+                telWrite(f"neighbor {lpPrefix}{routerID} remote-as {As}\r")
+                telWrite(f"neighbor {lpPrefix}{routerID} update-source Loopback0\r")
 
-        ecrire(str.encode("address-family ipv4\r"))
+        telWrite("address-family ipv4\r")
 
         if isASBR :
-            ecrire(str.encode("  redistribute connected\r"))
+            telWrite("redistribute connected\r")
             if(igp == "rip"):
-                ecrire(str.encode(f"  redistribute rip {ripName}\r"))
+                telWrite(f"redistribute rip {ripName}\r")
             if(igp == "ospf"):
-                ecrire(str.encode(f"  redistribute ospf {ospfProcess}\r"))
-            ecrire(str.encode("  network " + asInf[As]["prefix"] + "0.0\r"))
+                telWrite(f"redistribute ospf {ospfProcess}\r")
+            telWrite("network " + asInf[As]["prefix"] + "0.0\r")
             for ebgpNeighb in egpNeigbors:
-                ecrire(str.encode(f"  neighbor {ebgpNeighb.split()[0]} activate\r"))
+                telWrite(f"neighbor {ebgpNeighb.split()[0]} activate\r")
         for routerID in [router["id"] for router in routers if router["as"]==As]:
             if routerID != id:
-                ecrire(str.encode(f"  neighbor {lpPrefix}{routerID} activate\r"))
+                telWrite(f"neighbor {lpPrefix}{routerID} activate\r")
         
-        ecrire(str.encode(" exit-address-family\r!\r"))
+        telWrite("exit-address-family\r!\r")
 
     ## IGP
     if(igp == "ospf"):
-        ecrire(str.encode(f"router ospf {ospfProcess}\r router-id {id}.{id}.{id}.{id}\r"))
-    ecrire(b"exit\r")
-    ecrire(b"end\r")
+        telWrite(f"router ospf {ospfProcess}\r router-id {id}.{id}.{id}.{id}\r")
+    telWrite("exit\r")
+    telWrite("end\r")
     tn.close()
 
     print(f"Router {id} generated")
