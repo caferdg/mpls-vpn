@@ -20,9 +20,6 @@ nbAs = len(autoSys)
 lpPrefix = jsonFile["preferences"]["lp-prefix"] # must be a /112 !!
 ripName = jsonFile["preferences"]["ripName"]
 ospfProcess = str(jsonFile["preferences"]["ospfPid"])
-customPref = jsonFile["preferences"]["custom-pref"]
-peerPref = jsonFile["preferences"]["peer-pref"]
-providerPref = jsonFile["preferences"]["provider-pref"]
 vrf = jsonFile["preferences"]["vrf"]
 
 asInf = dict() # dictionnary containing the ip prefix and the index of each AS

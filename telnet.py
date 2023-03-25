@@ -1,12 +1,11 @@
 import json, os, sys, telnetlib, time
 
-if len(sys.argv) != 3:
-    print("Usage: python3 telnet.py <intentFile> <outputDir>")
+if len(sys.argv) != 2:
+    print("Usage: python3 telnet.py <intentFile>")
     exit(1)
     
 # IMPORT NETWORK INTENT
 intent = sys.argv[1]
-outputPath = sys.argv[2]
 f = open(intent, "r")
 jsonFile = json.load(f)
 f.close()
@@ -20,9 +19,6 @@ nbAs = len(autoSys)
 lpPrefix = jsonFile["preferences"]["lp-prefix"] # must be a /112 !!
 ripName = jsonFile["preferences"]["ripName"]
 ospfProcess = str(jsonFile["preferences"]["ospfPid"])
-customPref = jsonFile["preferences"]["custom-pref"]
-peerPref = jsonFile["preferences"]["peer-pref"]
-providerPref = jsonFile["preferences"]["provider-pref"]
 vrf = jsonFile["preferences"]["vrf"]
 
 asInf = dict() # dictionnary containing the ip prefix and the index of each AS
@@ -71,10 +67,12 @@ for router in routers:
     isASBR = id in ASBRlist
 
     def telWrite(strin):
-        tn.write(str.encode(strin))
+        tn.write(strin.encode())
         time.sleep(0.01)
 
     # CONSTANTS
+    telWrite("\r")
+    telWrite("end\r")
     telWrite("enable\r")
     telWrite("conf t\r")
     telWrite(f"version 15.2\rservice timestamps debug datetime msec\rservice timestamps log datetime msec\r!\rhostname {name}\r!\rboot-start-marker\rboot-end-marker\rno aaa new-model\rno ip icmp rate-limit unreachable\rip cef\rno ip domain lookup\rno ipv6 cef\rmultilink bundle-name authenticated\rip tcp synwait-time 5\r!\r")
@@ -87,8 +85,8 @@ for router in routers:
             rt = customer["rt"]
             telWrite(f"vrf definition {name}\r")
             telWrite(f"rd {rd}\r")
-            telWrite("route-target export {rt}\r")
-            telWrite("route-target import {rt}\r")
+            telWrite(f"route-target export {rt}\r")
+            telWrite(f"route-target import {rt}\r")
             telWrite("address-family ipv4\r")
             telWrite("exit-address-family\r!\r")
             telWrite("exit\r")
@@ -155,7 +153,7 @@ for router in routers:
                         cost = link["ospf-metric"]
                         telWrite(f"ip ospf cost {cost}\r")
             
-            telWrite(b"exit\r")
+            telWrite("exit\r")
 
     ## EGP
     if egp == "bgp" and isASBR and asType == "provider":
@@ -229,6 +227,9 @@ for router in routers:
         telWrite(f"router ospf {ospfProcess}\r router-id {id}.{id}.{id}.{id}\r")
     telWrite("exit\r")
     telWrite("end\r")
+    telWrite("write\r")
+    time.sleep(0.1)
+    telWrite("\r")
     tn.close()
 
     print(f"Router {id} generated")

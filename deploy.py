@@ -27,8 +27,8 @@ routers = {}
 
 # id <-> gnsDir
 for routerDir in routersDir:
-    for fileName in os.listdir(dynamipsPath + routerDir + "/configs/"):
-        if fileName.endswith("_startup-config.cfg"):
+    for fileName in os.listdir(dynamipsPath + routerDir):
+        if fileName.endswith("_bootflash"):
             match = re.search("(?<=i)(.*?)(?=\_)",fileName)
             id = fileName[match.start():match.end()]
             routers[id] = {}
