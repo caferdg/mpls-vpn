@@ -54,26 +54,11 @@ for asNum, content in jsonFile["as"].items():
             asList[-1].routerList.append(router)
 nbAs = len(asList)
 
-
-def getSubnet(As):
-    for subnet in As.subList:
-        if subnet.taken == False:
-            subnet.taken = True
-            return subnet
-    return None
-
-def freeSubnet(As, subnet):
-    for sub in As.subList:
-        if sub.num == subnet:
-            sub.taken = False
-            return
-    return None
-
 def assignIP():
     for router in routers:
         for adj in router.adjList:
             if adj.ip == "":
-                subnet = getSubnet(router.As)
+                subnet = router.As.getSubnet()
                 adj.ip = f"{router.As.prefix}{subnet.num}.1"
                 for neighAdj in adj.neighbor.adjList:
                     if neighAdj.neighbor == router:
@@ -111,14 +96,14 @@ for vrf in vrfList:
         telWrite(tel, "exit")
         # FORWARDING
         for adj in edgeRouter.adjList:
-            if adj.neighbor.As != edgeRouter.As:
+            if adj.neighbor.As.name == vrf["name"]:
                 telWrite(tel, "interface " + adj.interface)
                 telWrite(tel, "vrf forwarding " + vrf["name"])
                 telWrite(tel, "exit")
         tel.close()
 
 
-# INTERFACES IP ADDRESS
+# INTERFACES' IP ADDRESS
 for router in routers:
     tel = telnetlib.Telnet("localhost", router.port)
     for adj in router.adjList:
@@ -161,6 +146,75 @@ for router in routers:
                 telWrite(tel, "mpls ip")
                 telWrite(tel, "exit")
         tel.close()
+
+# init BGP
+for router in routers:
+    tel = telnetlib.Telnet("localhost", router.port)
+    telWrite(tel, "router bgp " + router.As.id)
+    telWrite(tel, f"bgp router-id {router.id}.{router.id}.{router.id}.{router.id}")
+    telWrite(tel, "bgp log-neighbor-changes")
+    telWrite(tel, "exit")
+    tel.close()
+
+# iBGP in customer as
+for router in routers:
+    if router.As.name != "provider":
+        tel = telnetlib.Telnet("localhost", router.port)
+        for routerr in router.As.routerList:
+            if routerr != router:
+                telWrite(tel, "router bgp " + str(router.As.id))
+                telWrite(tel, f"neighbor {pref['lp-prefix']}{routerr.id} remote-as {routerr.As.id}")
+                telWrite(tel, f"neighbor  {pref['lp-prefix']}{routerr.id} update-source loopback 0")
+                telWrite(tel, "address-family ipv4")
+                telWrite(tel, f"neighbor {pref['lp-prefix']}{routerr.id} activate")
+                telWrite(tel, "exit")
+                telWrite(tel, "exit")
+        tel.close()
+
+# eBGP
+for router in routers:
+    if router.isASBR():
+
+        tel = telnetlib.Telnet("localhost", router.port)
+        telWrite(tel, "router bgp " + str(router.As.id))
+
+        if router.As.name != "provider":
+            telWrite(tel, "address-family ipv4")
+            telWrite(tel, f"network {router.As.prefix}0.0")
+            telWrite(tel, "redistribute connected")
+            telWrite(tel, "redistribute ospf 1")
+            for adj in router.adjList:
+                if adj.neighbor.As != router.As:
+                    telWrite(tel, f"neighbor {adj.getNeighbIp()} remote-as {str(adj.neighbor.As.id)}")
+                    telWrite(tel, "address-family ipv4")
+                    telWrite(tel, f"neighbor {adj.getNeighbIp()} activate")
+                    telWrite(tel, "exit")
+
+        if router.As.name == "provider":
+            for adj in router.adjList:
+                if adj.neighbor.As != router.As:
+                    telWrite(tel, "address-family ipv4 vrf " + adj.neighbor.As.name)
+                    telWrite(tel, f"neighbor {adj.getNeighbIp()} remote-as {str(adj.neighbor.As.id)}")
+                    telWrite(tel, f"neighbor {adj.getNeighbIp()} activate")
+                    telWrite(tel, "exit")
+        
+        telWrite(tel, "exit")
+
+# MP-BGP between PE's
+for As in asList:
+    if As.name == "provider":
+        for router in As.getASBR():
+            tel = telnetlib.Telnet("localhost", router.port)
+            telWrite(tel, "router bgp " + str(router.As.id))
+            for routerr in As.getASBR():
+                if routerr != router:
+                    telWrite(tel, f"neighbor {pref['lp-prefix']}{routerr.id} remote-as " + str(As.id))
+                    telWrite(tel, f"neighbor {pref['lp-prefix']}{routerr.id} update-source loopback 0")
+                    telWrite(tel, "address-family vpnv4")
+                    telWrite(tel, f"neighbor {pref['lp-prefix']}{routerr.id} activate")
+                    telWrite(tel, f"neighbor {pref['lp-prefix']}{routerr.id} send-community both")
+                    telWrite(tel, "exit")
+            telWrite(tel, "exit")
 
 for router in routers:
     tel = telnetlib.Telnet("localhost", router.port)
