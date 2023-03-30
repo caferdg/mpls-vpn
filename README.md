@@ -1,8 +1,8 @@
-# MPLS VPN configuration generator
+# MPLS BGP VPN configuration generator
 Authors : Cafer DINGIL, Arthur-Mustapha FARWATI, Thomas FEUTREN, Baptiste GOUYEN, Margaux MASSOL
 
 ## About
-School project made during the network architectures and services (NAS) class at INSA Lyon. The goal was to create a tool that generates the configuration of a MPLS VPN network from a JSON file and a GNS3 project.
+School project made during the network architectures and services (NAS) class at INSA Lyon. The goal was to create a tool that generates the configuration of a MPLS BGP VPN network from a JSON file and a GNS3 project.
 
 ## Execution
 `python3 main.py <intentFile> <gnsProjectName>`
