@@ -54,8 +54,37 @@ class AS:
                 sub.taken = False
                 return
         return 
+    
+    def toDict(self):
+        rList = [router.name for router in self.routerList]
+        return dict(
+            name=self.name,
+            routerList=rList,
+            prefix=self.prefix,
+        )
 
 class Subnet:
     def __init__(self, num="", taken=False):
         self.num = num
         self.taken = False
+
+class Link:
+    def __init__(self, router1=None, router2=None, interface1="", interface2="", subnet=""):
+        self.router1 = router1
+        self.router2 = router2
+        self.interface1 = interface1
+        self.interface2 = interface2
+        self.subnet = subnet
+
+    def toDict(self):
+        return dict(
+            subnet=self.subnet,
+            router1=dict(
+                name=self.router1.name,
+                interface=self.interface1
+            ),
+            router2=dict(
+                name=self.router2.name,
+                interface=self.interface2
+            )
+        )

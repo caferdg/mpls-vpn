@@ -1,251 +1,79 @@
 {   
     "preferences":{
-        "lp-prefix": "120.0.0.",
-        "ripName": "ripp",
-        "ospfPid": 1,
-        "vrf": [
-            {
-                "name":"Client_A",
-                "as": [3,5],
-                "rd": "100:1",
-                "rt": "100:100"
-            },
-            {
-                "name":"Client_B",
-                "as": [2,4],
-                "rd": "100:2",
-                "rt": "100:200"
-            }
-        ]
+        "lp-prefix":"120.0.0.",
+        "ospf-pid":1
     },
-    "as":[
-        {
-            "id":1,
+    "as":{
+        "1":{
+            "name":"provider",
             "igp": "ospf",
             "egp": "bgp",
-            "ip-prefix": "200.1.",
-            "type": "provider"
+            "prefix": "200.1.",
+            "routers": ["PE1","P1","P2","PE2"]
         },
-        {
-            "id":3,
+        "2":{
+            "name":"Client_A",
             "igp": "ospf",
             "egp": "bgp",
-            "ip-prefix": "200.3.",
-            "type": "customer"
+            "prefix": "200.2.",
+            "routers": ["CE2"]
         },
-        {
-            "id":2,
+        "3":{
+            "name":"Client_B",
             "igp": "ospf",
             "egp": "bgp",
-            "ip-prefix": "200.2.",
-            "type" : "customer"
+            "prefix": "200.3.",
+            "routers": ["CE1","C1"]
         },
-        {
-            "id":5,
+        "4":{
+            "name":"Client_A",
             "igp": "ospf",
             "egp": "bgp",
-            "ip-prefix": "200.5.",
-            "type": "customer"
+            "prefix": "200.4.",
+            "routers": ["CE4"]
         },
-        {
-            "id":4,
+        "5":{
+            "name":"Client_B",
             "igp": "ospf",
             "egp": "bgp",
-            "ip-prefix": "200.4.",
-            "type": "customer"
+            "prefix": "200.5.",
+            "routers": ["CE3"]
         }
-    ],
-    "routers": [
-    {   
-        "name":"PE1",
-        "id":1,
-        "as":1,
-        "adj":[
-            {
-                "neighbor":2,
-                "links":[{
-                    "interface":"GigabitEthernet1/0",
-                    "protocol-type": "igp"
-                }
-                ]
-            },
-            {
-                "neighbor":5,
-                "links":[{
-                    "interface":"GigabitEthernet3/0",
-                    "protocol-type": "egp"
-                }
-                ]
-            },
-            {
-                "neighbor":6,
-                "links":[{
-                    "interface":"GigabitEthernet2/0",
-                    "protocol-type": "egp"
-                }
-                ]
-            }
-        ]
     },
-    {
-        "name":"P1",
-        "id":2,
-        "as":1,
-        "adj":[
-            {
-                "neighbor":1,
-                "links":[{
-                    "interface":"GigabitEthernet1/0",
-                    "protocol-type": "igp"
+    "vrf": [
+        {
+            "name": "Client_A",
+            "PE": [
+                {   
+                    "name":"PE1",
+                    "rd":"100:100",
+                    "rt-import":"100:100",
+                    "rt-export":"100:200"
+                },
+                {   
+                    "name":"PE2",
+                    "rd":"100:100",
+                    "rt-import":"100:200",
+                    "rt-export":"100:100"
                 }
-                ]
-            },
-            {
-                "neighbor":3,
-                "links":[{
-                    "interface":"GigabitEthernet2/0",
-                    "protocol-type": "igp"
+            ]
+        },
+        {
+            "name": "Client_B",
+            "PE": [
+                {   
+                    "name":"PE1",
+                    "rd":"200:200",
+                    "rt-import":"200:100",
+                    "rt-export":"200:200"
+                },
+                {   
+                    "name":"PE2",
+                    "rd":"200:200",
+                    "rt-import":"200:200",
+                    "rt-export":"200:100"
                 }
-                ]
-            }
-        ]
-    },
-    {   
-        "name":"P2",
-        "id":3,
-        "as":1,
-        "adj":[
-            {
-                "neighbor":2,
-                "links":[{
-                    "interface":"GigabitEthernet2/0",
-                    "protocol-type": "igp"
-                }
-                ]
-            },
-            {
-                "neighbor":4,
-                "links":[{
-                    "interface":"GigabitEthernet1/0",
-                    "protocol-type": "igp"
-                }
-                ]
-            }
-        ]
-    },
-    {   
-        "name":"PE2",
-        "id":4,
-        "as":1,
-        "adj":[
-            {
-                "neighbor":3,
-                "links":[{
-                    "interface":"GigabitEthernet1/0",
-                    "protocol-type": "igp"
-                }
-                ]
-            },
-            {
-                "neighbor":7,
-                "links":[{
-                    "interface":"GigabitEthernet3/0",
-                    "protocol-type": "egp"
-                }
-                ]
-            },
-            {
-                "neighbor":8,
-                "links":[{
-                    "interface":"GigabitEthernet2/0",
-                    "protocol-type": "egp"
-                }
-                ]
-            }
-        ]
-    },
-    {   
-        "name":"CE1",
-        "id":5,
-        "as":3,
-        "adj":[
-            {
-                "neighbor":1,
-                "links":[{
-                    "interface":"GigabitEthernet1/0",
-                    "protocol-type": "egp"
-                }
-                ]
-            },
-            {
-                "neighbor":9,
-                "links":[{
-                    "interface":"GigabitEthernet2/0",
-                    "protocol-type": "igp"
-                }
-                ]
-            }
-        ]
-    },
-    {   
-        "name":"CE2",
-        "id":6,
-        "as":2,
-        "adj":[
-            {
-                "neighbor":1,
-                "links":[{
-                    "interface":"GigabitEthernet2/0",
-                    "protocol-type": "egp"
-                }
-                ]
-            }
-        ]
-    },
-    {   
-        "name":"CE3",
-        "id":7,
-        "as":5,
-        "adj":[
-            {
-                "neighbor":4,
-                "links":[{
-                    "interface":"GigabitEthernet1/0",
-                    "protocol-type": "egp"
-                }
-                ]
-            }
-        ]
-    },
-    {   
-        "name":"CE4",
-        "id":8,
-        "as":4,
-        "adj":[
-            {
-                "neighbor":4,
-                "links":[{
-                    "interface":"GigabitEthernet1/0",
-                    "protocol-type": "egp"
-                }
-                ]
-            }
-        ]
-    },
-    {   
-        "name":"C1",
-        "id":9,
-        "as":3,
-        "adj":[
-            {
-                "neighbor":5,
-                "links":[{
-                    "interface":"GigabitEthernet2/0",
-                    "protocol-type": "igp"
-                }
-                ]
-            }
-        ]
-    }
-]
+            ]
+        }
+    ]
 }

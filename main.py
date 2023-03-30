@@ -1,13 +1,11 @@
 import json, os, sys, gns3fy, time, telnetlib
 from structures import *
 
-# TO DO
-# - MP BGP
-# - BGP VRF
-
 if len(sys.argv) != 3:
     print("Usage: python3 main.py <intentFile> <projectName>")
     exit(1)
+
+saveName = "previousConf.json"
 
 # Import GNS Project
 projectName = sys.argv[2]
@@ -18,9 +16,8 @@ gnsLinks = project.links_summary(is_print=False)
 gnsRouters = project.nodes_summary(is_print=False)
 
 # Import Intent File
-f = open(sys.argv[1], "r")
-jsonFile = json.load(f)
-f.close()
+with open(sys.argv[1], "r") as f:
+    jsonFile = json.load(f)
 pref = jsonFile["preferences"]
 vrfList = jsonFile["vrf"]
 
@@ -66,16 +63,35 @@ def assignIP():
                         break
 assignIP()
 
+# Create Link list
+linkList = []
+for link in gnsLinks:
+    sub = ""
+    for adj in getRouter(link[0]).adjList:
+        if adj.neighbor.name == link[2]:
+            sub = adj.ip[:len(adj.ip)-1]
+            break
+    linkList.append(Link(getRouter(link[0]), getRouter(link[2]), link[1], link[3], sub))
+
+
+# SAVE CONFIG
+jsonDict = dict(vrfs = [], As = [], links = [])
+jsonDict["vrfs"] = vrfList
+jsonDict["As"] = [as_.toDict() for as_ in asList]
+jsonDict["links"] = [link.toDict() for link in linkList]
+with open(saveName, "w") as f:
+    json.dump(jsonDict, f, indent=4)
+
 def telWrite(tel, strin):
     tel.write(strin.encode())
-    time.sleep(0.05)
+    time.sleep(0.02)
     tel.write(b"\r")
 
 # START
 for router in routers:
     tel = telnetlib.Telnet("localhost", router.port)
     telWrite(tel, "")
-    time.sleep(0.1)
+    time.sleep(0.5)
     telWrite(tel, "end")
     telWrite(tel, "enable")
     telWrite(tel, "conf t")

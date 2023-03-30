@@ -7,7 +7,7 @@ Authors : Cafer DINGIL, Arthur-Mustapha FARWATI, Thomas FEUTREN, Baptiste GOUYEN
 ## Features
 - 2 clients communication : CE1 with CE3 and CE2 with CE4
 - CE1 has an AS C1
-![Alt text](https://github.com/caferdg/mpls-vpn/blob/main/MPLS.png)
+![Alt text](MPLS.png)
 
 ## Execution
 `python3 conf.py <intentFile> <outputDir>`
