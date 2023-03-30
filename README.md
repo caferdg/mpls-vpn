@@ -6,8 +6,8 @@ School project made during the network architectures and services (NAS) class at
 
 ## Execution
 `python3 main.py <intentFile> <gnsProjectName>`
-    - `intentFile` is the JSON file that describes the network's topology and the VPNs to create
-    - `gnsProjectName` is the name of the GNS3 project which contains the adjacency datas of the network
+ - `intentFile` is the JSON file that describes the network's topology and the VPNs to create
+ - `gnsProjectName` is the name of the GNS3 project which contains the adjacency datas of the network
 
 ## Rules
 Rules for the intent file :
