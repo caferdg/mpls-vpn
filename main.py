@@ -84,7 +84,7 @@ with open(saveName, "w") as f:
 
 def telWrite(tel, strin):
     tel.write(strin.encode())
-    time.sleep(0.02)
+    time.sleep(0.08)
     tel.write(b"\r")
 
 # START
@@ -105,8 +105,10 @@ for vrf in vrfList:
         # DEFINITIONS
         telWrite(tel, "vrf definition " + vrf["name"])
         telWrite(tel, "rd " + PE["rd"])
-        telWrite(tel, "route-target export " + PE["rt-export"])
-        telWrite(tel, "route-target import " + PE["rt-import"])
+        for rt in PE["rt-export"]:
+            telWrite(tel, "route-target export " + rt)
+        for rt in PE["rt-import"]:
+            telWrite(tel, "route-target import " + rt)
         telWrite(tel, "address-family ipv4")
         telWrite(tel, "exit-address-family")
         telWrite(tel, "exit")
@@ -190,7 +192,7 @@ for router in routers:
 # eBGP
 for router in routers:
     if router.isASBR():
-
+        print(router.name)
         tel = telnetlib.Telnet("localhost", router.port)
         telWrite(tel, "router bgp " + str(router.As.id))
 
