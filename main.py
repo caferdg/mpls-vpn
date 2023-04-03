@@ -192,7 +192,6 @@ for router in routers:
 # eBGP
 for router in routers:
     if router.isASBR():
-        print(router.name)
         tel = telnetlib.Telnet("localhost", router.port)
         telWrite(tel, "router bgp " + str(router.As.id))
 
