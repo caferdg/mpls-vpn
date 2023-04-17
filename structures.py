@@ -66,7 +66,7 @@ class AS:
 class Subnet:
     def __init__(self, num="", taken=False):
         self.num = num
-        self.taken = False
+        self.taken = taken
 
 class Link:
     def __init__(self, router1=None, router2=None, interface1="", interface2="", subnet=""):

@@ -1,5 +1,4 @@
 # MPLS BGP VPN configuration generator
-Authors : Cafer DINGIL, Arthur-Mustapha FARWATI, Thomas FEUTREN, Baptiste GOUYEN, Margaux MASSOL
 
 ## About
 School project made during the network architectures and services (NAS) class at INSA Lyon. The goal was to create a tool that generates the configuration of a MPLS BGP VPN network from a JSON file and a GNS3 project.
@@ -15,6 +14,4 @@ Rules for the intent file :
  - For each autonomous system `ip-prefix` must have 24 bits (3 blocks of 8 bits)
 
 ## To do
- - add gns project example in repo
- - Site sharing
  - avoid config wipe ...

@@ -95,6 +95,7 @@ for router in routers:
     telWrite(tel, "end")
     telWrite(tel, "enable")
     telWrite(tel, "conf t")
+    telWrite(tel, f"hostname {router.name}")
     tel.close()
 
 # VRF
