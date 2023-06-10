@@ -14,7 +14,7 @@ class Router:
         self.name = name
         self.port = port
         self.id = id
-        self.As=AS
+        self.As=As
         self.adjList = adjList
 
     def isASBR(self):
